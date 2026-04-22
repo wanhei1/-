@@ -1,0 +1,6 @@
+{
+  "name": "喵格测试 (CATI)",
+  "description": "基于 MBTI 设计的中国版猫咪性格测试，发现你家猫主子的 16 种喵格。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
