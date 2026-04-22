@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -21,10 +16,19 @@ import {
   MessageCircle,
   MessageSquare,
   Globe,
-  Loader2
+  Loader2,
+  Bookmark,
+  Download,
+  LayoutGrid
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
-import { QUESTIONS, CAT_TYPES, CatMBTI, CatTypeInfo } from './constants';
+import html2canvas from 'html2canvas';
+import { QUESTIONS, CAT_TYPES, CatMBTI, CatTypeInfo, Question } from './constants';
+import { SavedCat } from './types';
+import { AnimatedNumber } from './components/AnimatedNumber';
+import { ParticleEffect } from './components/ParticleEffect';
+import { ShareCard } from './components/ShareCard';
+import { CatDrawer } from './components/CatDrawer';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
@@ -36,6 +40,35 @@ export default function App() {
   const [answers, setAnswers] = useState<string[]>([]);
   const [isCalculated, setIsCalculated] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  
+  // New State for Features
+  const [totalCount, setTotalCount] = useState(10249);
+  const [savedCats, setSavedCats] = useState<SavedCat[]>([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
+  const [catNameInput, setCatNameInput] = useState('');
+
+  // Initialization & LocalStorage
+  useEffect(() => {
+    try {
+      const storedCount = localStorage.getItem('cati_total_count');
+      if (storedCount) setTotalCount(parseInt(storedCount));
+      
+      const storedCats = localStorage.getItem('cati_cats');
+      if (storedCats) setSavedCats(JSON.parse(storedCats));
+    } catch (e) {
+      console.error("Failed to load data from localStorage", e);
+    }
+  }, []);
+
+  const incrementCount = () => {
+    if (!sessionStorage.getItem('cati_counted')) {
+      const newCount = totalCount + 1;
+      setTotalCount(newCount);
+      localStorage.setItem('cati_total_count', newCount.toString());
+      sessionStorage.setItem('cati_counted', 'true');
+    }
+  };
 
   const handleStart = () => {
     setAnswers([]);
@@ -47,12 +80,16 @@ export default function App() {
     const newAnswers = [...answers, value];
     setAnswers(newAnswers);
     
-    if (currentQuestionIndex < QUESTIONS.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      setView('result');
-      setIsCalculated(true);
-    }
+    // Smooth transition to next question
+    setTimeout(() => {
+      if (currentQuestionIndex < QUESTIONS.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else {
+        setView('result');
+        setIsCalculated(true);
+        incrementCount();
+      }
+    }, 300);
   };
 
   const resultType = useMemo(() => {
@@ -62,8 +99,14 @@ export default function App() {
       E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0
     };
 
-    answers.forEach(val => {
-      counts[val] = (counts[val] || 0) + 1;
+    answers.forEach((ansStr, qIdx) => {
+      const question = QUESTIONS[qIdx];
+      const val = parseInt(ansStr);
+      // Likert Scoring Logic
+      if (val === 0) counts[question.leftValue] += 2;
+      else if (val === 1) counts[question.leftValue] += 1;
+      else if (val === 3) counts[question.rightValue] += 1;
+      else if (val === 4) counts[question.rightValue] += 2;
     });
 
     const mbti = [
@@ -81,33 +124,80 @@ export default function App() {
     setIsCalculated(false);
   };
 
+  const handleSaveCat = () => {
+    if (!resultType || !catNameInput.trim()) return;
+
+    const newCat: SavedCat = {
+      id: crypto.randomUUID(),
+      name: catNameInput,
+      mbti: resultType.id as CatMBTI,
+      typeName: resultType.name,
+      date: new Date().toISOString().split('T')[0],
+      traits: resultType.traits
+    };
+
+    const newCats = [newCat, ...savedCats];
+    setSavedCats(newCats);
+    localStorage.setItem('cati_cats', JSON.stringify(newCats));
+    setIsRecordModalOpen(false);
+    setCatNameInput('');
+  };
+
+  const handleDeleteCat = (id: string) => {
+    const filtered = savedCats.filter(c => c.id !== id);
+    setSavedCats(filtered);
+    localStorage.setItem('cati_cats', JSON.stringify(filtered));
+  };
+
+  const handleViewArchivedCat = (cat: SavedCat) => {
+    console.log("Viewing cat", cat);
+    // Shortcut for demonstration: this app logic primarily resets on welcome
+    // But we can manually set the result view for this cat if needed.
+    // For now, consistent with instructions, we just alert or could expand.
+    alert(`查看 ${cat.name} 的详情: ${cat.typeName} (${cat.mbti})`);
+  };
+
   return (
     <div className="min-h-screen bg-[#FFFDF9] font-sans text-[#1A1A1A] overflow-x-hidden selection:bg-orange-100">
-      <div className="max-w-md mx-auto min-h-screen flex flex-col relative">
+      <div className="max-w-md mx-auto min-h-screen flex flex-col relative shadow-xl bg-white border-x border-gray-50">
+        
+        {/* Persistent Header for Drawer Access */}
+        <div className="absolute top-4 right-4 z-50">
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 hover:bg-orange-50 transition-colors"
+          >
+            <LayoutGrid size={20} className="text-orange-500" />
+            <span className="text-xs font-black pr-1 inline-block">我的猫咪</span>
+          </button>
+        </div>
+
         <AnimatePresence mode="wait">
           {view === 'welcome' && (
-            <div key="welcome">
-              <WelcomeView onStart={handleStart} />
-            </div>
+            <motion.div key="welcome" className="flex-1">
+              <WelcomeView onStart={handleStart} totalCount={totalCount} />
+            </motion.div>
           )}
 
           {view === 'quiz' && (
-            <div key="quiz">
+            <motion.div key="quiz" className="flex-1">
               <QuizView 
                 currentIndex={currentQuestionIndex}
                 onAnswer={handleAnswer}
               />
-            </div>
+            </motion.div>
           )}
 
           {view === 'result' && resultType && (
-            <div key={resultType.id}>
+            <motion.div key={resultType.id} className="flex-1">
               <ResultView 
                 type={resultType}
+                totalCount={totalCount}
                 onReset={handleReset}
+                onSave={() => setIsRecordModalOpen(true)}
                 onShare={() => setIsShareModalOpen(true)}
               />
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -116,39 +206,96 @@ export default function App() {
           onClose={() => setIsShareModalOpen(false)}
           resultType={resultType}
         />
+
+        <CatDrawer 
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          cats={savedCats}
+          onDelete={handleDeleteCat}
+          onView={handleViewArchivedCat}
+        />
+
+        {/* Save Cat Modal */}
+        <AnimatePresence>
+          {isRecordModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsRecordModalOpen(false)}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl space-y-6"
+              >
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Bookmark size={32} className="text-orange-500" />
+                  </div>
+                  <h3 className="text-2xl font-black">保存档案</h3>
+                  <p className="text-sm text-gray-400">给你的猫咪起个名字吧~</p>
+                </div>
+
+                <input 
+                  autoFocus
+                  type="text"
+                  value={catNameInput}
+                  onChange={(e) => setCatNameInput(e.target.value)}
+                  placeholder="例如：小黄、咪咪..."
+                  className="w-full px-6 py-4 bg-gray-50 border-2 border-transparent focus:border-orange-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-center text-lg"
+                />
+
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setIsRecordModalOpen(false)}
+                    className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-600"
+                  >
+                    取消
+                  </button>
+                  <button 
+                    onClick={handleSaveCat}
+                    disabled={!catNameInput.trim()}
+                    className="flex-[2] bg-orange-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-orange-200 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    确定保存
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
-function WelcomeView({ onStart }: { onStart: () => void }) {
+function WelcomeView({ onStart, totalCount }: { onStart: () => void, totalCount: number }) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8"
-    >
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center space-y-8">
       <div className="relative">
         <motion.div 
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="bg-orange-100 p-6 rounded-full"
+          className="bg-orange-100 p-8 rounded-full"
         >
-          <Cat size={80} className="text-orange-500" />
+          <Cat size={100} className="text-orange-500" />
         </motion.div>
         <motion.div 
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.5 }}
-          className="absolute -top-2 -right-2 bg-yellow-400 p-2 rounded-full shadow-lg"
+          className="absolute -top-2 -right-2 bg-yellow-400 p-3 rounded-full shadow-lg"
         >
-          <Star size={20} className="text-white fill-white" />
+          <Star size={24} className="text-white fill-white" />
         </motion.div>
       </div>
 
       <div className="space-y-4">
-        <h1 className="text-5xl font-black tracking-tighter text-[#1A1A1A]">
+        <h1 className="text-5xl font-black tracking-tighter">
           喵格测试 <span className="text-orange-500">CATI</span>
         </h1>
         <p className="text-lg text-gray-500 font-medium leading-relaxed">
@@ -157,208 +304,292 @@ function WelcomeView({ onStart }: { onStart: () => void }) {
         </p>
       </div>
 
-      <div className="w-full space-y-3">
+      <div className="w-full space-y-4">
         <button
           onClick={onStart}
-          className="w-full bg-[#1A1A1A] text-white py-5 rounded-2xl flex items-center justify-center gap-2 text-xl font-bold hover:bg-orange-600 transition-colors shadow-2xl active:scale-95"
-          id="btn-start"
+          className="w-full bg-[#1A1A1A] text-white py-6 rounded-3xl flex items-center justify-center gap-3 text-2xl font-black hover:bg-orange-600 transition-all shadow-2xl active:scale-95"
         >
-          开始测试 <ArrowRight size={20} />
+          立即开启 <ArrowRight size={24} />
         </button>
-        <p className="text-xs text-gray-400">目前已有 10,249 位铲屎官参与</p>
+        <div className="flex flex-col items-center">
+            <p className="text-xs text-gray-400 flex items-center gap-1 font-bold">
+              目前已有 <span className="text-orange-500 font-black scale-110 px-1 inline-block"><AnimatedNumber value={totalCount} /></span> 位铲屎官参与
+            </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 w-full pt-8">
-        <div className="bg-orange-50 p-4 rounded-2xl text-left border border-orange-100">
+      <div className="grid grid-cols-2 gap-4 w-full pt-4">
+        <div className="bg-orange-50 p-5 rounded-[32px] text-left border border-orange-100">
           <Heart className="text-orange-400 mb-2" size={24} />
           <h3 className="font-bold text-sm">深度解析</h3>
-          <p className="text-xs text-gray-400">挖掘猫咪内心世界</p>
+          <p className="text-[10px] text-gray-400">挖掘猫咪内心世界</p>
         </div>
-        <div className="bg-blue-50 p-4 rounded-2xl text-left border border-blue-100">
+        <div className="bg-blue-50 p-5 rounded-[32px] text-left border border-blue-100">
           <Zap className="text-blue-400 mb-2" size={24} />
-          <h3 className="font-bold text-sm">专业科学</h3>
-          <p className="text-xs text-gray-400">基于行为心理学模型</p>
+          <h3 className="font-bold text-sm">专业模型</h3>
+          <p className="text-[10px] text-gray-400">基于行为心理学</p>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 function QuizView({ currentIndex, onAnswer }: { currentIndex: number, onAnswer: (val: string) => void }) {
   const currentQuestion = QUESTIONS[currentIndex];
   const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+
+  const handleSelect = (idx: number) => {
+    setSelectedIdx(idx);
+    onAnswer(idx.toString());
+    // Auto-next is handled by handleAnswer timeout in App
+  };
+
+  // Reset local state when question changes
+  useEffect(() => {
+    setSelectedIdx(null);
+  }, [currentIndex]);
+
+  const scaleSizes = ["w-12 h-12", "w-10 h-10", "w-9 h-9", "w-10 h-10", "w-12 h-12"];
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      className="flex-1 flex flex-col p-6 pt-12 space-y-8"
-    >
+    <div className="flex flex-col min-h-screen p-6 pt-20 space-y-12">
+      {/* Dynamic Progress Bar */}
       <div className="space-y-4">
         <div className="flex justify-between items-end">
-          <span className="text-sm font-black text-orange-500 tracking-widest">QUESTION {currentIndex + 1}/12</span>
-          <span className="text-xs font-bold text-gray-300">{Math.round(progress)}%</span>
+          <div className="space-y-1">
+            <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] uppercase">Test Progress</span>
+            <h4 className="text-lg font-black">{currentIndex + 1} <span className="text-gray-300 font-bold text-sm">/ {QUESTIONS.length}</span></h4>
+          </div>
+          <span className="text-xs font-mono font-black text-orange-500">{Math.round(progress)}%</span>
         </div>
-        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden p-1 shadow-inner">
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            className="h-full bg-orange-500"
+            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+            className="h-full bg-gradient-to-r from-orange-400 to-pink-500 rounded-full"
           />
         </div>
       </div>
 
-      <div className="flex-1 space-y-8">
-        <h2 className="text-2xl font-bold leading-snug">
+      <div className="flex-1 flex flex-col items-center space-y-12 text-center">
+        <motion.h2 
+          key={currentQuestion.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-2xl font-black leading-tight text-[#1A1A1A] px-4"
+        >
           {currentQuestion.text}
-        </h2>
+        </motion.h2>
 
-        <div className="space-y-4">
-          {currentQuestion.options.map((option, idx) => (
-            <motion.button
-              key={idx}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onAnswer(option.value)}
-              className="w-full p-6 text-left bg-white border-2 border-gray-100 rounded-3xl hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center justify-between group shadow-sm"
-            >
-              <span className="text-lg font-medium pr-4">{option.text}</span>
-              <ChevronRight className="text-gray-300 group-hover:text-orange-500 transition-colors shrink-0" />
-            </motion.button>
-          ))}
+        <div className="w-full space-y-10">
+          <div className="flex justify-between text-xs font-bold text-gray-400 px-2 leading-relaxed">
+            <p className="max-w-[40%] text-left">{currentQuestion.leftOption}</p>
+            <p className="max-w-[40%] text-right">{currentQuestion.rightOption}</p>
+          </div>
+
+          <div className="flex items-center justify-between px-4">
+            {scaleSizes.map((size, idx) => (
+              <motion.button
+                key={idx}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleSelect(idx)}
+                className={`
+                  ${size} rounded-full border-2 transition-all flex items-center justify-center
+                  ${selectedIdx === idx 
+                    ? 'bg-orange-500 border-orange-500 shadow-lg shadow-orange-100' 
+                    : 'bg-white border-gray-200 hover:border-orange-300'
+                  }
+                `}
+              >
+                {selectedIdx === idx && (
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-full h-full rounded-full bg-orange-500"
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
+
+          <div className="flex justify-between font-black text-sm tracking-tight pt-2">
+            <span className="text-orange-500">← {currentQuestion.leftLabel}</span>
+            <span className="text-pink-500">{currentQuestion.rightLabel} →</span>
+          </div>
         </div>
       </div>
 
-      <div className="py-4 text-center">
-        <p className="text-xs text-gray-400 italic">“ 选出最符合你家猫主子日常行为的一项 ”</p>
+      <div className="py-6 text-center border-t border-gray-50 italic">
+        <p className="text-xs text-gray-300">“ 选出最符合你家猫主子日常表现的那一档 ”</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function ResultView({ type, onReset, onShare }: { type: CatTypeInfo, onReset: () => void, onShare: () => void }) {
+function ResultView({ type, onReset, onShare, onSave, totalCount }: { type: CatTypeInfo, onReset: () => void, onShare: () => void, onSave: () => void, totalCount: number }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
-  const [error, setError] = useState(false);
+  const [explosion, setExplosion] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Blast effect duration
+    const timer = setTimeout(() => setExplosion(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let active = true;
     const generateImage = async () => {
       try {
-        setIsGenerating(true);
-        setError(false);
-        
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
           contents: {
-            parts: [{ text: `A high-quality, cute, and artistic illustration of a cat personality: ${type.imagePrompt}. Focus on the personality traits: ${type.traits.join(', ')}. Minimalist background, vibrant colors, Pixar-style animation render.` }],
+            parts: [{ text: `Cute artistic minimalist illustration of a cat: ${type.imagePrompt}. Focus: ${type.traits.join(', ')}. Pixar-style studio lighting, clean background. DO NOT include any text, letters, words, or typography in the image.` }],
           },
-          config: {
-            imageConfig: {
-              aspectRatio: "1:1"
-            }
-          }
+          config: { imageConfig: { aspectRatio: "1:1" } }
         });
-
         if (!active) return;
-
         for (const part of response.candidates[0].content.parts) {
           if (part.inlineData) {
-            const base64Data = part.inlineData.data;
-            setImageUrl(`data:image/png;base64,${base64Data}`);
+            setImageUrl(`data:image/png;base64,${part.inlineData.data}`);
             setIsGenerating(false);
             return;
           }
         }
-        
-        throw new Error("No image data found");
       } catch (err) {
         console.error("Image generation failed", err);
-        if (active) {
-          setError(true);
-          setIsGenerating(false);
-        }
+        if (active) setIsGenerating(false);
       }
     };
-
     generateImage();
     return () => { active = false; };
   }, [type]);
 
+  const handleGenerateShareCard = async () => {
+    setIsSharing(true);
+    // Give time for the hidden card to be in DOM if needed
+    setTimeout(async () => {
+      const element = document.getElementById('share-card');
+      if (element) {
+        try {
+          const canvas = await html2canvas(element, {
+            scale: 2,
+            backgroundColor: null,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            ignoreElements: (el) => el.tagName === 'lazy', // Dummy ignore
+          });
+          const imgData = canvas.toDataURL('image/png');
+          setPreviewImage(imgData);
+        } catch (e) {
+          console.error("Capture failed", e);
+          alert("图片生成失败，请重试。错误原因可能是浏览器暂不支持某些现代CSS特性。");
+        } finally {
+          setIsSharing(false);
+        }
+      }
+    }, 200);
+  };
+
+  const handleDownload = () => {
+    if (!previewImage) return;
+    const link = document.createElement('a');
+    link.download = `我家猫是${type.name}-喵格测试.png`;
+    link.href = previewImage;
+    link.click();
+  };
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 flex flex-col p-6 pt-10 space-y-6 pb-20"
-    >
-      <div className="bg-orange-500 text-white p-8 rounded-[40px] relative overflow-hidden shadow-2xl">
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-orange-400 rounded-full opacity-50 blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-orange-600 rounded-full opacity-30 blur-3xl" />
+    <div className="flex flex-col min-h-screen p-6 pt-10 space-y-6 pb-20 relative">
+      {explosion && <ParticleEffect />}
+      
+      {/* Share Card to be captured */}
+      <ShareCard 
+        typeName={type.name}
+        subTitle={type.title}
+        traits={type.traits}
+        description={type.description}
+        id={type.id}
+        portraitUrl={imageUrl}
+      />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-orange-400 to-pink-500 text-white p-8 rounded-[40px] relative overflow-hidden shadow-2xl"
+      >
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-3xl" />
         
         <div className="relative z-10 space-y-6">
           <div className="flex items-center justify-between">
-            <span className="bg-black/20 px-4 py-1 rounded-full text-xs font-bold tracking-widest backdrop-blur-md">
-              RESULT CARD
+            <span className="bg-black/20 px-4 py-1 rounded-full text-[10px] font-black tracking-widest backdrop-blur-md">
+              MBTI ANALYSIS 喵
             </span>
-            <Cat size={24} className="text-white/80 hover:text-white transition-colors" />
+            <Cat size={24} className="text-white/80" />
           </div>
 
-          <div className="space-y-4">
-            {/* Image Placeholder/Result */}
-            <div className="w-full aspect-square bg-orange-400/30 rounded-3xl overflow-hidden relative shadow-inner border border-white/10 group">
+          <div className="space-y-6">
+            <div className="w-full aspect-square bg-black/5 rounded-[32px] overflow-hidden relative shadow-inner border border-white/10">
               {isGenerating ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-orange-600/20 backdrop-blur-sm">
-                  <Loader2 className="text-white animate-spin" size={40} />
-                  <p className="text-xs font-bold text-white/70 tracking-widest animate-pulse">正在捕捉喵能...</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-orange-600/10 backdrop-blur-sm">
+                  <Loader2 className="text-white animate-spin" size={32} />
+                  <p className="text-[10px] font-black text-white/50 tracking-widest">能量同步中...</p>
                 </div>
-              ) : imageUrl ? (
+              ) : imageUrl && (
                 <motion.img 
                   initial={{ opacity: 0, scale: 1.1 }}
                   animate={{ opacity: 1, scale: 1 }}
                   src={imageUrl} 
                   alt={type.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 text-white/50">
-                  <Cat size={48} className="opacity-20" />
-                  <p className="text-[10px] font-bold uppercase tracking-widest">Image unavailable</p>
-                </div>
               )}
             </div>
 
-            <div className="space-y-2">
-              <h1 className="text-4xl font-black tracking-tight">{type.name}</h1>
-              <div className="flex items-center gap-2">
-                <span className="text-7xl font-black text-white/20 leading-none">{type.id}</span>
-                <p className="text-xl font-bold">{type.title}</p>
+            <div className="space-y-1">
+              <motion.h1 
+                initial={{ filter: 'blur(20px)', opacity: 0 }}
+                animate={{ filter: 'blur(0px)', opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                className="text-4xl font-black tracking-tighter"
+              >
+                {type.name}
+              </motion.h1>
+              <div className="flex items-center gap-3">
+                <span className="text-6xl font-black text-white/20 leading-none">{type.id}</span>
+                <p className="text-xl font-black text-white/90">{type.title}</p>
               </div>
             </div>
           </div>
           
-          <div className="h-[2px] w-12 bg-white/40" />
+          <div className="h-1 w-12 bg-white/30 rounded-full" />
           
-          <p className="text-lg font-medium leading-relaxed italic border-l-4 border-white/30 pl-4">
+          <p className="text-lg font-bold leading-relaxed italic border-l-4 border-white/20 pl-4">
             “ {type.description} ”
           </p>
         </div>
-      </div>
+      </motion.div>
 
       <div className="space-y-6">
-        <div className="bg-white/50 p-4 rounded-[32px] border border-orange-100">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-orange-500/80 mb-4 tracking-widest uppercase">
-            <Star size={16} className="fill-orange-500 text-orange-500" /> 性格关键词
+        <div className="space-y-4">
+          <h3 className="flex items-center gap-2 text-xs font-black text-gray-400 tracking-widest uppercase">
+            <Star size={14} className="fill-orange-500 text-orange-500" /> 性格标签
           </h3>
           <div className="flex flex-wrap gap-2">
             {type.traits.map((trait, idx) => (
               <motion.span 
                 key={idx}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="px-4 py-2 bg-white text-orange-600 rounded-xl font-bold text-sm border border-orange-200 shadow-sm"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', delay: 0.4 + idx * 0.1, damping: 12 }}
+                className="px-5 py-2.5 bg-orange-50 text-orange-600 rounded-2xl font-black text-sm border border-orange-100 shadow-sm"
               >
                 # {trait}
               </motion.span>
@@ -367,30 +598,78 @@ function ResultView({ type, onReset, onShare }: { type: CatTypeInfo, onReset: ()
         </div>
 
         <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm space-y-4">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-gray-400 tracking-widest uppercase border-b border-gray-50 pb-4">
-            <Info size={16} className="text-blue-500" /> 喵格相处指南
+          <h3 className="flex items-center gap-2 text-[10px] font-black text-gray-400 tracking-widest uppercase border-b border-gray-50 pb-4">
+            <Info size={14} className="text-blue-500" /> 喵格相处指南
           </h3>
-          <p className="text-gray-600 text-sm leading-relaxed font-medium">
+          <p className="text-gray-600 text-sm leading-relaxed font-bold">
             {type.tips}
           </p>
         </div>
 
+        <div className="p-4 bg-orange-50/50 rounded-2xl border border-dashed border-orange-200 text-center">
+            <p className="text-xs text-orange-400 font-bold">已有 {totalCount} 位铲屎官发现了自家猫的秘密 🐾</p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <button 
-            onClick={onShare}
-            className="flex-1 flex items-center justify-center gap-2 p-5 bg-white border-2 border-gray-100 rounded-2xl font-bold hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
+             onClick={handleGenerateShareCard}
+             disabled={isSharing}
+             className="relative flex flex-col items-center justify-center p-6 bg-white border-2 border-orange-100 rounded-[32px] font-black hover:bg-orange-50 active:scale-95 transition-all shadow-sm animate-pulse-glow"
           >
-            <Share2 size={20} /> 分享测试
+            {isSharing ? <Loader2 size={24} className="animate-spin text-orange-400" /> : <div className="flex flex-col items-center">
+               <Download size={24} className="text-orange-500 mb-1" />
+               <span className="text-sm">生成分享卡</span>
+            </div>}
           </button>
-          <button 
-            onClick={onReset}
-            className="flex-1 flex items-center justify-center gap-2 p-5 bg-[#1A1A1A] text-white rounded-2xl font-bold hover:bg-orange-600 active:scale-95 transition-all shadow-lg"
-          >
-            <RefreshCcw size={20} /> 重新测试
-          </button>
+          
+          <div className="grid grid-rows-2 gap-2">
+            <button 
+              onClick={onSave}
+              className="flex items-center justify-center gap-2 bg-blue-50 text-blue-600 rounded-2xl font-black text-xs hover:bg-blue-100 transition-colors"
+            >
+              <Bookmark size={16} /> 保存档案
+            </button>
+            <button 
+              onClick={onReset}
+              className="flex items-center justify-center gap-2 bg-[#1A1A1A] text-white rounded-2xl font-black text-xs hover:bg-orange-600 transition-colors"
+            >
+              <RefreshCcw size={16} /> 重新测试
+            </button>
+          </div>
         </div>
       </div>
-    </motion.div>
+
+      {/* Share Image Preview Modal */}
+      <AnimatePresence>
+        {previewImage && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[40px] p-6 w-full max-w-sm space-y-6"
+            >
+              <div className="flex justify-between items-center">
+                <h4 className="font-black">分享卡片预览</h4>
+                <button onClick={() => setPreviewImage(null)}><X /></button>
+              </div>
+              <div className="bg-gray-100 rounded-2xl overflow-hidden aspect-[375/500] shadow-xl border border-gray-200">
+                <img src={previewImage} className="w-full h-full object-contain" />
+              </div>
+              <div className="space-y-3">
+                <button 
+                  onClick={handleDownload}
+                  className="w-full bg-orange-500 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2"
+                >
+                  <Download size={20} /> 下载并分享
+                </button>
+                <p className="text-[10px] text-gray-400 text-center font-bold">小提示：长按图片也可直接保存到手机哦</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -452,27 +731,26 @@ function ShareModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[110]">
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
           />
           <motion.div 
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[32px] p-8 pb-12 z-50 shadow-2xl"
+            className="absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl"
           >
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-xl font-bold text-[#1A1A1A]">分享测试结果</h3>
+              <h3 className="text-xl font-black text-[#1A1A1A]">分享测试结果</h3>
               <button 
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                id="close-share-modal"
               >
                 <X size={24} />
               </button>
@@ -485,10 +763,10 @@ function ShareModal({
                   onClick={platform.action}
                   className="flex flex-col items-center gap-2 group"
                 >
-                  <div className={`w-16 h-16 ${platform.color} rounded-2xl flex items-center justify-center transition-all group-active:scale-95 shadow-sm border border-transparent group-hover:border-white/50`}>
+                  <div className={`w-16 h-16 ${platform.color} rounded-3xl flex items-center justify-center transition-all group-active:scale-95 shadow-sm border border-transparent group-hover:border-white/50`}>
                     {platform.icon}
                   </div>
-                  <span className="text-xs font-bold text-gray-500 tracking-widest">{platform.name}</span>
+                  <span className="text-[10px] font-black text-gray-400 tracking-widest">{platform.name}</span>
                 </button>
               ))}
             </div>
@@ -504,9 +782,9 @@ function ShareModal({
                   <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex gap-3 items-start">
                     <Info className="text-green-600 shrink-0 mt-0.5" size={18} />
                     <div className="space-y-1">
-                      <p className="text-sm font-bold text-green-800">微信分享说明</p>
-                      <p className="text-xs text-green-700 leading-relaxed">
-                        由于微信外部浏览器限制，分享文案与链接已复制到剪贴板。请打开微信，在聊天框中<span className="font-black">直接粘贴</span>即可分享给好友。
+                      <p className="text-sm font-black text-green-800">微信分享说明</p>
+                      <p className="text-xs text-green-700 leading-relaxed font-bold">
+                        由于微信外部浏览器限制，文案与链接已复制。请打开微信，在聊天框中<span className="font-black text-green-600 underline">直接粘贴</span>即可分享。
                       </p>
                     </div>
                   </div>
@@ -514,7 +792,7 @@ function ShareModal({
               )}
             </AnimatePresence>
 
-            <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 space-y-3">
+            <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100 space-y-3 shadow-inner">
               <p className="text-[10px] font-black text-gray-300 tracking-widest uppercase">Direct Link</p>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 overflow-hidden">
@@ -522,7 +800,7 @@ function ShareModal({
                 </div>
                 <button 
                   onClick={handleCopy}
-                  className="shrink-0 flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-sm hover:border-orange-200 hover:text-orange-500"
+                  className="shrink-0 flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-black active:scale-95 transition-all shadow-sm hover:border-orange-200 hover:text-orange-500"
                 >
                   {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
                   {copied ? "已复制" : "复制链接"}
@@ -530,7 +808,7 @@ function ShareModal({
               </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

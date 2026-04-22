@@ -1,6 +1,18 @@
 
 export type CatMBTI = 'INTJ' | 'INTP' | 'ENTJ' | 'ENTP' | 'INFJ' | 'INFP' | 'ENFJ' | 'ENFP' | 'ISTJ' | 'ISFJ' | 'ESTJ' | 'ESFJ' | 'ISTP' | 'ISFP' | 'ESTP' | 'ESFP';
 
+export interface Question {
+  id: number;
+  text: string;
+  dimension: 'EI' | 'SN' | 'TF' | 'JP';
+  leftLabel: string;
+  rightLabel: string;
+  leftOption: string;
+  rightOption: string;
+  leftValue: 'E' | 'S' | 'T' | 'J';
+  rightValue: 'I' | 'N' | 'F' | 'P';
+}
+
 export interface CatTypeInfo {
   id: CatMBTI;
   name: string;
@@ -158,101 +170,137 @@ export const CAT_TYPES: Record<CatMBTI, CatTypeInfo> = {
   }
 };
 
-export const QUESTIONS = [
+export const QUESTIONS: Question[] = [
   {
     id: 1,
+    dimension: 'EI',
     text: "当家里突然来了陌生客人时，你家猫咪通常会：",
-    options: [
-      { text: "立刻躲到床底或柜子里，消失得无影无踪", value: "I" },
-      { text: "在远处观察，或者主动上前闻闻客人的气味", value: "E" }
-    ]
+    leftLabel: "热衷社交",
+    rightLabel: "极度害羞",
+    leftOption: "主动上前闻闻客人的气味，甚至求抚摸",
+    rightOption: "立刻躲到床底或柜子里，直到客人离开",
+    leftValue: 'E',
+    rightValue: 'I'
   },
   {
     id: 2,
+    dimension: 'SN',
     text: "当它看到窗外飞过一只小鸟或飞虫时：",
-    options: [
-      { text: "发出刺耳的咔咔声，并疯狂拍打窗户想要抓住它", value: "S" },
-      { text: "只是静静地注视着，眼神深邃得像是在思考鸟生的意义", value: "N" }
-    ]
+    leftLabel: "动作派",
+    rightLabel: "沉思派",
+    leftOption: "疯狂拍打窗户，迫切想要抓住它",
+    rightOption: "静静地注视着，眼神深邃得像是在思考鸟生",
+    leftValue: 'S',
+    rightValue: 'N'
   },
   {
     id: 3,
+    dimension: 'EI',
     text: "你下班回家推开门的那一刻：",
-    options: [
-      { text: "它已经等在门口，对着你一通狂叫或疯狂蹭腿", value: "E" },
-      { text: "它还瘫在窝里睡觉，只是慵懒地抬了一下眼皮", value: "I" }
-    ]
+    leftLabel: "热情如火",
+    rightLabel: "稳如泰山",
+    leftOption: "它已经在门口，对着你一通狂叫或蹭腿",
+    rightOption: "它还瘫在窝里睡觉，只是慵懒地抬下眼皮",
+    leftValue: 'E',
+    rightValue: 'I'
   },
   {
     id: 4,
+    dimension: 'TF',
     text: "在面对剪指甲或洗澡这些“喵生磨难”时：",
-    options: [
-      { text: "冷静应对，或是虽然不爽但还是忍辱负重配合完成", value: "T" },
-      { text: "反应超级激烈，惨叫、挣扎，表现得像受了天大委屈", value: "F" }
-    ]
+    leftLabel: "理智应对",
+    rightLabel: "情绪爆发",
+    leftOption: "冷静配合，或者虽然不爽但能忍辱负重",
+    rightOption: "反应超级激烈，表现得像受了天大委屈",
+    leftValue: 'T',
+    rightValue: 'F'
   },
   {
     id: 5,
+    dimension: 'EI',
     text: "如果你因为忙碌而暂时没理会它，它会：",
-    options: [
-      { text: "很有眼力见，自己找玩具玩或者在大腿边静静陪着", value: "I" },
-      { text: "通过踩键盘、推倒杯子等各种方式强行引起你的注意", value: "E" }
-    ]
+    leftLabel: "戏精附体",
+    rightLabel: "独自安好",
+    leftOption: "通过捣乱（如踩键盘）强行引起你的注意",
+    rightOption: "很懂事，自己找玩具玩或者安静地陪在身边",
+    leftValue: 'E',
+    rightValue: 'I'
   },
   {
     id: 6,
+    dimension: 'SN',
     text: "玩逗猫棒的时候，它的风格更倾向于：",
-    options: [
-      { text: "直接莽撞，只要动了就冲上去扑咬，动作极快", value: "S" },
-      { text: "伏地潜行很久，仔细观察轨迹后寻找最佳时机出击", value: "N" }
-    ]
+    leftLabel: "瞬间爆发",
+    rightLabel: "运筹帷幄",
+    leftOption: "直接莽撞，只要动了就冲上去扑咬",
+    rightOption: "长时间潜伏观察，寻找最佳时机才出击",
+    leftValue: 'S',
+    rightValue: 'N'
   },
   {
     id: 7,
+    dimension: 'JP',
     text: "你家猫咪每天的作息习惯更像是：",
-    options: [
-      { text: "像精准的闹钟，每天早上准时踩醒你催饭，分毫不差", value: "J" },
-      { text: "想一出是一出，有时候睡一整天，有时候凌晨两点跑酷", value: "P" }
-    ]
+    leftLabel: "守时标兵",
+    rightLabel: "自由灵魂",
+    leftOption: "精准的闹钟，每天准时催饭，分毫不差",
+    rightOption: "想一出是一出，作息非常随机",
+    leftValue: 'J',
+    rightValue: 'P'
   },
   {
     id: 8,
+    dimension: 'TF',
     text: "当你因为心情不好而难过哭泣时，它会：",
-    options: [
-      { text: "似乎能感知到你的情绪，过来舔舔你或者靠在你身边", value: "F" },
-      { text: "迷惑地看着你，完全不能理解人类为何如此脆弱，然后走开", value: "T" }
-    ]
+    leftLabel: "不明所以",
+    rightLabel: "深情共鸣",
+    leftOption: "迷惑地看着你，完全不能理解脆弱的人类",
+    rightOption: "似乎能感知到你的情绪，过来舔你或依靠你",
+    leftValue: 'T',
+    rightValue: 'F'
   },
   {
     id: 9,
+    dimension: 'SN',
     text: "给它买了一个造型奇特的新玩具，它会：",
-    options: [
-      { text: "先战术性撤退，远远地观察大半天，确定安全才靠近", value: "N" },
-      { text: "不管三七二十一，直接冲上去开整，先咬两口再说", value: "S" }
-    ]
+    leftLabel: "先试再说",
+    rightLabel: "先看再动",
+    leftOption: "不管三七二十一，直接冲上去咬两口试试",
+    rightOption: "战术性撤退，远观大半天确定安全才靠近",
+    leftValue: 'S',
+    rightValue: 'N'
   },
   {
     id: 10,
+    dimension: 'TF',
     text: "如果今天突然换了一种没吃过的猫粮品牌：",
-    options: [
-      { text: "作为“干饭喵”，只要是吃的都没问题，该吃吃该喝喝", value: "T" },
-      { text: "作为“美食家”，挑剔地闻闻然后埋头拒绝，满脸幽怨", value: "F" }
-    ]
+    leftLabel: "务实干饭",
+    rightLabel: "挑剔美食",
+    leftOption: "作为“干饭喵”，只要是吃的都没问题",
+    rightOption: "作为“美食家”，挑剔地闻闻然后埋头拒绝",
+    leftValue: 'T',
+    rightValue: 'F'
   },
   {
     id: 11,
-    text: "如果它最喜欢的那个位子（比如沙发角）被你占了：",
-    options: [
-      { text: "算了，我再去别的地方找个舒服位置瘫着吧", value: "P" },
-      { text: "一定要纠缠你或者盯着你，直到你自觉让位为止", value: "J" }
-    ]
+    dimension: 'JP',
+    text: "如果它最喜欢的那个位子被你占了：",
+    leftLabel: "夺回主权",
+    rightLabel: "大度让出",
+    leftOption: "一定要纠缠你或者死盯着你，直到你自觉让位",
+    rightOption: "算了，我再去别的地方找个舒服位置瘫着",
+    leftValue: 'J',
+    rightValue: 'P'
   },
   {
     id: 12,
+    dimension: 'TF',
     text: "因为犯了错被你训斥以后，它的反应通常是：",
-    options: [
-      { text: "躲避你的眼神，耳朵撇向耳后，表现得很委屈或羞愧", value: "F" },
-      { text: "毫无悔意，甚至盯着你的眼睛，像是在说“你能拿我怎样”", value: "T" }
-    ]
+    leftLabel: "坚守立场",
+    rightLabel: "心虚反省",
+    leftOption: "毫无悔意，甚至盯着你的眼睛“死不认账”",
+    rightOption: "躲避你的眼神，表现得很委屈或羞愧",
+    leftValue: 'T',
+    rightValue: 'F'
   }
 ];
