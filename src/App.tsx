@@ -21,7 +21,6 @@ import {
   Download,
   LayoutGrid
 } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
 import html2canvas from 'html2canvas';
 import { QUESTIONS, CAT_TYPES, CatMBTI, CatTypeInfo, Question } from './constants';
 import { SavedCat } from './types';
@@ -29,8 +28,6 @@ import { AnimatedNumber } from './components/AnimatedNumber';
 import { ParticleEffect } from './components/ParticleEffect';
 import { ShareCard } from './components/ShareCard';
 import { CatDrawer } from './components/CatDrawer';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
 
 type ViewState = 'welcome' | 'quiz' | 'result';
 
@@ -437,8 +434,6 @@ function QuizView({ currentIndex, onAnswer }: { currentIndex: number, onAnswer: 
 }
 
 function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }: { type: CatTypeInfo, onReset: () => void, onShare: () => void, onSave: () => void, totalCount: number, archivedName?: string | null }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(true);
   const [explosion, setExplosion] = useState(!archivedName); // Only explode on new result
   const [isSharing, setIsSharing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -448,34 +443,6 @@ function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }
     const timer = setTimeout(() => setExplosion(false), 2000);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    const generateImage = async () => {
-      try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: {
-            parts: [{ text: `Cute artistic minimalist illustration of a cat: ${type.imagePrompt}. Focus: ${type.traits.join(', ')}. Pixar-style studio lighting, clean background. DO NOT include any text, letters, words, or typography in the image.` }],
-          },
-          config: { imageConfig: { aspectRatio: "1:1" } }
-        });
-        if (!active) return;
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            setImageUrl(`data:image/png;base64,${part.inlineData.data}`);
-            setIsGenerating(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Image generation failed", err);
-        if (active) setIsGenerating(false);
-      }
-    };
-    generateImage();
-    return () => { active = false; };
-  }, [type]);
 
   const handleGenerateShareCard = async () => {
     setIsSharing(true);
@@ -523,7 +490,7 @@ function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }
         traits={type.traits}
         description={type.description}
         id={type.id}
-        portraitUrl={imageUrl}
+        portraitUrl={type.image}
       />
 
       <motion.div 
@@ -543,21 +510,14 @@ function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }
 
           <div className="space-y-6">
             <div className="w-full aspect-square bg-black/5 rounded-[32px] overflow-hidden relative shadow-inner border border-white/10">
-              {isGenerating ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 bg-orange-600/10 backdrop-blur-sm">
-                  <Loader2 className="text-white animate-spin" size={32} />
-                  <p className="text-[10px] font-black text-white/50 tracking-widest">能量同步中...</p>
-                </div>
-              ) : imageUrl && (
                 <motion.img 
                   initial={{ opacity: 0, scale: 1.1 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  src={imageUrl} 
+                  src={type.image} 
                   alt={type.name} 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
-              )}
             </div>
 
             <div className="space-y-1">
