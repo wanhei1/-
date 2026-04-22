@@ -47,6 +47,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [catNameInput, setCatNameInput] = useState('');
+  const [viewingArchivedCat, setViewingArchivedCat] = useState<SavedCat | null>(null);
 
   // Initialization & LocalStorage
   useEffect(() => {
@@ -93,6 +94,12 @@ export default function App() {
   };
 
   const resultType = useMemo(() => {
+    // Priority 1: If we are intentionally viewing a specific cat from archive
+    if (viewingArchivedCat) {
+      return CAT_TYPES[viewingArchivedCat.mbti];
+    }
+
+    // Priority 2: Current test results
     if (answers.length < QUESTIONS.length) return null;
     
     const counts: Record<string, number> = {
@@ -122,6 +129,7 @@ export default function App() {
   const handleReset = () => {
     setView('welcome');
     setIsCalculated(false);
+    setViewingArchivedCat(null);
   };
 
   const handleSaveCat = () => {
@@ -150,11 +158,9 @@ export default function App() {
   };
 
   const handleViewArchivedCat = (cat: SavedCat) => {
-    console.log("Viewing cat", cat);
-    // Shortcut for demonstration: this app logic primarily resets on welcome
-    // But we can manually set the result view for this cat if needed.
-    // For now, consistent with instructions, we just alert or could expand.
-    alert(`查看 ${cat.name} 的详情: ${cat.typeName} (${cat.mbti})`);
+    setViewingArchivedCat(cat);
+    setView('result');
+    setIsDrawerOpen(false);
   };
 
   return (
@@ -196,6 +202,7 @@ export default function App() {
                 onReset={handleReset}
                 onSave={() => setIsRecordModalOpen(true)}
                 onShare={() => setIsShareModalOpen(true)}
+                archivedName={viewingArchivedCat?.name}
               />
             </motion.div>
           )}
@@ -429,10 +436,10 @@ function QuizView({ currentIndex, onAnswer }: { currentIndex: number, onAnswer: 
   );
 }
 
-function ResultView({ type, onReset, onShare, onSave, totalCount }: { type: CatTypeInfo, onReset: () => void, onShare: () => void, onSave: () => void, totalCount: number }) {
+function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }: { type: CatTypeInfo, onReset: () => void, onShare: () => void, onSave: () => void, totalCount: number, archivedName?: string | null }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
-  const [explosion, setExplosion] = useState(true);
+  const [explosion, setExplosion] = useState(!archivedName); // Only explode on new result
   const [isSharing, setIsSharing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -560,7 +567,7 @@ function ResultView({ type, onReset, onShare, onSave, totalCount }: { type: CatT
                 transition={{ duration: 0.8 }}
                 className="text-4xl font-black tracking-tighter"
               >
-                {type.name}
+                {archivedName ? `${archivedName}是` : ''}{type.name}
               </motion.h1>
               <div className="flex items-center gap-3">
                 <span className="text-6xl font-black text-white/20 leading-none">{type.id}</span>
