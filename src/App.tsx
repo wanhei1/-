@@ -24,6 +24,14 @@ import {
 import html2canvas from 'html2canvas';
 import { QUESTIONS, CAT_TYPES, CatMBTI, CatTypeInfo, Question } from './constants';
 import { SavedCat } from './types';
+
+// Declare Monetag global functions
+declare global {
+  interface Window {
+    show_10933787?: (options?: any) => Promise<any>;
+  }
+}
+
 import { AnimatedNumber } from './components/AnimatedNumber';
 import { ParticleEffect } from './components/ParticleEffect';
 import { ShareCard } from './components/ShareCard';
@@ -45,6 +53,40 @@ export default function App() {
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [catNameInput, setCatNameInput] = useState('');
   const [viewingArchivedCat, setViewingArchivedCat] = useState<SavedCat | null>(null);
+  const [isAdLoading, setIsAdLoading] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+
+  // Monetag Ad Trigger
+  const triggerInterstitialAd = async () => {
+    if (typeof window.show_10933787 === 'function') {
+      try {
+        console.log("Triggering Monetag Interstitial...");
+        await window.show_10933787();
+      } catch (e) {
+        console.error("Ad failed or was blocked", e);
+      }
+    }
+  };
+
+  const triggerRewardedAd = async () => {
+    if (typeof window.show_10933787 === 'function') {
+      setIsAdLoading(true);
+      try {
+        // Many Monetag scripts use the same show_xxxx for both, or have specific configs
+        // For Reward, we usually wait for completion
+        await window.show_10933787();
+        setIsUnlocked(true);
+        alert("解锁成功！为您开启深度解析模式 ✨");
+      } catch (e) {
+        console.error("Rewarded ad failed", e);
+      } finally {
+        setIsAdLoading(false);
+      }
+    } else {
+      // Fallback if ad SDK not loaded
+      setIsUnlocked(true);
+    }
+  };
 
   // Initialization & LocalStorage
   useEffect(() => {
@@ -61,9 +103,11 @@ export default function App() {
 
   const incrementCount = () => {
     if (!sessionStorage.getItem('cati_counted')) {
-      const newCount = totalCount + 1;
-      setTotalCount(newCount);
-      localStorage.setItem('cati_total_count', newCount.toString());
+      setTotalCount(prev => {
+        const newCount = prev + 1;
+        localStorage.setItem('cati_total_count', newCount.toString());
+        return newCount;
+      });
       sessionStorage.setItem('cati_counted', 'true');
     }
   };
@@ -79,13 +123,17 @@ export default function App() {
     setAnswers(newAnswers);
     
     // Smooth transition to next question
-    setTimeout(() => {
+    setTimeout(async () => {
       if (currentQuestionIndex < QUESTIONS.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
       } else {
+        // Before showing result, trigger Interstitial Ad
+        await triggerInterstitialAd();
+        
         setView('result');
         setIsCalculated(true);
         incrementCount();
+        setIsUnlocked(false); // Reset unlock state for new result
       }
     }, 300);
   };
@@ -171,7 +219,7 @@ export default function App() {
             className="bg-white/80 backdrop-blur-md p-3 rounded-full shadow-lg border border-gray-100 flex items-center gap-2 hover:bg-orange-50 transition-colors"
           >
             <LayoutGrid size={20} className="text-orange-500" />
-            <span className="text-xs font-black pr-1 inline-block">我的猫咪</span>
+            <span className="text-xs font-black pr-1 inline-block">喵系档案</span>
           </button>
         </div>
 
@@ -200,6 +248,9 @@ export default function App() {
                 onSave={() => setIsRecordModalOpen(true)}
                 onShare={() => setIsShareModalOpen(true)}
                 archivedName={viewingArchivedCat?.name}
+                isUnlocked={isUnlocked}
+                onTriggerReward={triggerRewardedAd}
+                isAdLoading={isAdLoading}
               />
             </motion.div>
           )}
@@ -240,8 +291,8 @@ export default function App() {
                   <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Bookmark size={32} className="text-orange-500" />
                   </div>
-                  <h3 className="text-2xl font-black">保存档案</h3>
-                  <p className="text-sm text-gray-400">给你的猫咪起个名字吧~</p>
+                  <h3 className="text-2xl font-black">保存记录</h3>
+                  <p className="text-sm text-gray-400">为你的喵系人格起个昵称吧~</p>
                 </div>
 
                 <input 
@@ -303,8 +354,8 @@ function WelcomeView({ onStart, totalCount }: { onStart: () => void, totalCount:
           喵格测试 <span className="text-orange-500">CATI</span>
         </h1>
         <p className="text-lg text-gray-500 font-medium leading-relaxed">
-          基于 MBTI 设计的猫咪性格分析<br />
-          发现你家猫主子的 16 种喵格
+          基于 MBTI 深度定制的喵系人格测试<br />
+          寻找潜伏在你灵魂里的 16 种喵格
         </p>
       </div>
 
@@ -317,7 +368,7 @@ function WelcomeView({ onStart, totalCount }: { onStart: () => void, totalCount:
         </button>
         <div className="flex flex-col items-center">
             <p className="text-xs text-gray-400 flex items-center gap-1 font-bold">
-              目前已有 <span className="text-orange-500 font-black scale-110 px-1 inline-block"><AnimatedNumber value={totalCount} /></span> 位铲屎官参与
+              目前已有 <span className="text-orange-500 font-black scale-110 px-1 inline-block"><AnimatedNumber value={totalCount} /></span> 位人类找回了喵系灵魂
             </p>
         </div>
       </div>
@@ -325,8 +376,8 @@ function WelcomeView({ onStart, totalCount }: { onStart: () => void, totalCount:
       <div className="grid grid-cols-2 gap-4 w-full pt-4">
         <div className="bg-orange-50 p-5 rounded-[32px] text-left border border-orange-100">
           <Heart className="text-orange-400 mb-2" size={24} />
-          <h3 className="font-bold text-sm">深度解析</h3>
-          <p className="text-[10px] text-gray-400">挖掘猫咪内心世界</p>
+          <h3 className="font-bold text-sm">灵魂共鸣</h3>
+          <p className="text-[10px] text-gray-400">多维度剖析真实自我</p>
         </div>
         <div className="bg-blue-50 p-5 rounded-[32px] text-left border border-blue-100">
           <Zap className="text-blue-400 mb-2" size={24} />
@@ -427,13 +478,33 @@ function QuizView({ currentIndex, onAnswer }: { currentIndex: number, onAnswer: 
       </div>
 
       <div className="py-6 text-center border-t border-gray-50 italic">
-        <p className="text-xs text-gray-300">“ 选出最符合你家猫主子日常表现的那一档 ”</p>
+        <p className="text-xs text-gray-300">“ 选出最符合你真实反应的那一档 ”</p>
       </div>
     </div>
   );
 }
 
-function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }: { type: CatTypeInfo, onReset: () => void, onShare: () => void, onSave: () => void, totalCount: number, archivedName?: string | null }) {
+function ResultView({ 
+  type, 
+  onReset, 
+  onShare, 
+  onSave, 
+  totalCount, 
+  archivedName,
+  isUnlocked,
+  onTriggerReward,
+  isAdLoading
+}: { 
+  type: CatTypeInfo, 
+  onReset: () => void, 
+  onShare: () => void, 
+  onSave: () => void, 
+  totalCount: number, 
+  archivedName?: string | null,
+  isUnlocked: boolean,
+  onTriggerReward: () => void,
+  isAdLoading: boolean
+}) {
   const [explosion, setExplosion] = useState(!archivedName); // Only explode on new result
   const [isSharing, setIsSharing] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -474,7 +545,7 @@ function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }
   const handleDownload = () => {
     if (!previewImage) return;
     const link = document.createElement('a');
-    link.download = `我家猫是${type.name}-喵格测试.png`;
+    link.download = `我的喵系人格是${type.name}-喵格测试.png`;
     link.href = previewImage;
     link.click();
   };
@@ -564,17 +635,43 @@ function ResultView({ type, onReset, onShare, onSave, totalCount, archivedName }
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm space-y-4">
+        <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm space-y-4 relative overflow-hidden">
           <h3 className="flex items-center gap-2 text-[10px] font-black text-gray-400 tracking-widest uppercase border-b border-gray-50 pb-4">
             <Info size={14} className="text-blue-500" /> 喵格相处指南
           </h3>
-          <p className="text-gray-600 text-sm leading-relaxed font-bold">
-            {type.tips}
-          </p>
+          
+          <div className={!isUnlocked && !archivedName ? 'blur-md select-none pointer-events-none' : ''}>
+            <p className="text-gray-600 text-sm leading-relaxed font-bold">
+              {type.tips}
+            </p>
+          </div>
+
+          {!isUnlocked && !archivedName && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] p-6 text-center">
+              <div className="bg-white p-6 rounded-[24px] shadow-xl border border-orange-100 space-y-4 max-w-[240px]">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto text-orange-500">
+                  <Zap size={24} className="fill-orange-500" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-black text-sm">解锁深度解析</h4>
+                  <p className="text-[10px] text-gray-400 font-bold">观看 5 秒视频解锁完整《喵格指南》与《人宠兼容表》</p>
+                </div>
+                <button 
+                  onClick={onTriggerReward}
+                  disabled={isAdLoading}
+                  className="w-full bg-orange-500 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-orange-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isAdLoading ? <Loader2 size={16} className="animate-spin" /> : "立即解锁"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-4 bg-orange-50/50 rounded-2xl border border-dashed border-orange-200 text-center">
-            <p className="text-xs text-orange-400 font-bold">已有 {totalCount} 位铲屎官发现了自家猫的秘密 🐾</p>
+            <p className="text-xs text-orange-400 font-bold flex items-center justify-center gap-1">
+              已有 <span className="scale-110 px-0.5 inline-block"><AnimatedNumber value={totalCount} /></span> 位人类找回了喵系灵魂 🐾
+            </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -653,8 +750,8 @@ function ShareModal({
   const [showWechatTip, setShowWechatTip] = useState(false);
   const shareUrl = window.location.href;
   const shareTitle = resultType 
-    ? `我家猫主子的喵格竟然是【${resultType.name}】！太准了，快来看看你家猫属于哪种喵格？` 
-    : "发现你家猫主子的 16 种喵格 - 喵格测试 CATI";
+    ? `我的喵系人格竟然是【${resultType.name}】！太准了，快来看看你灵魂里住着哪只猫？` 
+    : "寻找潜伏在你灵魂里的 16 种喵格 - 喵格测试 CATI";
 
   const handleCopy = async () => {
     try {

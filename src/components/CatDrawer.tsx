@@ -32,7 +32,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
               <div className="flex items-center gap-2">
                 <Cat size={24} className="text-orange-500" />
-                <h2 className="text-xl font-black">我的猫咪档案</h2>
+                <h2 className="text-xl font-black">喵系人格档案</h2>
               </div>
               <button 
                 onClick={onClose}
@@ -49,8 +49,8 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
                     <Cat size={40} className="opacity-20" />
                   </div>
                   <p className="text-sm font-bold tracking-widest text-center">
-                    暂无猫咪档案<br />
-                    快去完成测试并保存吧 🐾
+                    暂无历史记录<br />
+                    快去寻找你的灵魂猫咪吧 🐾
                   </p>
                 </div>
               ) : (
@@ -102,7 +102,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
             </div>
 
             <div className="p-6 bg-white border-t border-gray-100 italic text-center">
-              <p className="text-[10px] text-gray-400">“ 用心记录 每一个陪伴的瞬间 ”</p>
+              <p className="text-[10px] text-gray-400">“ 用心发现 潜伏在灵魂里的另一个自己 ”</p>
             </div>
           </motion.div>
         </>

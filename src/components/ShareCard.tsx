@@ -130,7 +130,7 @@ export function ShareCard({ typeName, subTitle, traits, description, id, portrai
 
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <p style={{ fontSize: '10px', fontFamily: 'monospace', color: colors.gray[300], margin: 0 }}>cati.meow.test</p>
-        <p style={{ fontSize: '10px', color: colors.gray[400], margin: 0 }}>扫码或搜索「喵格测试」发现更多</p>
+        <p style={{ fontSize: '10px', color: colors.gray[400], margin: 0 }}>扫码或搜索「喵格测试」发现真实的你</p>
       </div>
     </div>
   );
