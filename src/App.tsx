@@ -61,7 +61,8 @@ export default function App() {
     if (typeof window.show_10933787 === 'function') {
       try {
         console.log("Triggering Monetag Interstitial...");
-        await window.show_10933787();
+        // Use basic call for transition interstitial
+        window.show_10933787();
       } catch (e) {
         console.error("Ad failed or was blocked", e);
       }
@@ -72,18 +73,17 @@ export default function App() {
     if (typeof window.show_10933787 === 'function') {
       setIsAdLoading(true);
       try {
-        // Many Monetag scripts use the same show_xxxx for both, or have specific configs
-        // For Reward, we usually wait for completion
-        await window.show_10933787();
+        // Using 'pop' for direct rewarded experience as per snippets
+        await window.show_10933787('pop');
+        // If the promise resolves, it means the interaction was completed
         setIsUnlocked(true);
-        alert("解锁成功！为您开启深度解析模式 ✨");
       } catch (e) {
-        console.error("Rewarded ad failed", e);
+        console.error("Rewarded ad error", e);
       } finally {
         setIsAdLoading(false);
       }
     } else {
-      // Fallback if ad SDK not loaded
+      // Fallback if ad SDK not loaded correctly in sandbox
       setIsUnlocked(true);
     }
   };
