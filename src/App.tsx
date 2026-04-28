@@ -113,7 +113,7 @@ export default function App() {
           frequency: 2,
           capping: 0.1, // 6 minutes
           interval: 30,
-          timeout: 5,
+          timeout: 30,
           everyPage: false
         }
       });
