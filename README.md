@@ -1,20 +1,42 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# CATI - Discover Your Internal Feline Personality 🐾
 
-# Run and deploy your AI Studio app
+**CATI (Cat MBTI Test)** is a polished, bilingual web application that helps users discover which of the 16 unique cat personas matches their personality best. Combining psychological frameworks with whimsical feline traits, CATI offers a fun and engaging way to explore the "MBTI" (Meow-Briggs Type Indicator).
 
-This contains everything you need to run your app locally.
+## ✨ Key Features
 
-View your app in AI Studio: https://ai.studio/apps/559a8458-7979-45e0-b7bc-cd4a15571b1e
+- **16 Unique Cat Personas**: From the "Aloof Ruler" (INTJ black cat) to the "Vitality Transmitter" (ENFP calico), every MBTI type is reimagined as a cat with specific traits and tips.
+- **Bilingual Interface**: Seamlessly toggle between English and Chinese (simplified) at any time.
+- **Interactive Quiz Experience**: 20 carefully crafted questions with smooth animations powered by Framer Motion.
+- **Result Archiving**: Save your test results to your local "Feline Collection" to keep track of your past personas.
+- **Shareable Cards**: Generate high-quality, beautifully designed result cards that you can save and share with friends.
+- **Responsive Design**: Optimized for mobile-first interaction with a clean, modern aesthetic.
 
-## Run Locally
+## 🚀 Tech Stack
 
-**Prerequisites:**  Node.js
+- **Framework**: React 18+ with TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Utilities**: 
+  - `html2canvas` for card generation
+  - `lucide-react` for iconography
+  - `vercel-analytics` for insights
+- **Build Tool**: Vite
 
+## 🎨 Design Philosophy
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+CATI is designed to feel like a premium, "Swiss-style" mobile app. It features:
+- A soft, warm color palette (`#FFFDF9`) to evoke a sense of comfort.
+- Bold, black typography with heavy weights for a modern look.
+- Interactive micro-animations for feedback (hover states, progress bars, card explosions).
+- Sophisticated cat portraits generated to match each personality's "vibe."
+
+## 🛠️ Getting Started
+
+1. **Start the Test**: Land on the welcome screen and click "Start Test".
+2. **Answer Questions**: 20 questions across 4 dimensions (EI, SN, TF, JP).
+3. **See Your Result**: Discover your feline counterpart and read your "Living Tips".
+4. **Save & Share**: Name your cat, save it to your local archives, or generate a shareable image for social media.
+
+---
+
+*“Discover another self lurking in the soul.”*
