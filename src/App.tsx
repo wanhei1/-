@@ -37,6 +37,8 @@ import { ParticleEffect } from './components/ParticleEffect';
 import { ShareCard } from './components/ShareCard';
 import { CatDrawer } from './components/CatDrawer';
 
+import { Analytics } from '@vercel/analytics/react';
+
 type ViewState = 'welcome' | 'quiz' | 'result';
 
 export default function App() {
@@ -98,6 +100,20 @@ export default function App() {
       if (storedCats) setSavedCats(JSON.parse(storedCats));
     } catch (e) {
       console.error("Failed to load data from localStorage", e);
+    }
+
+    // Initialize In-App Interstitial Configuration from your snippet
+    if (typeof window.show_10933787 === 'function') {
+      window.show_10933787({
+        type: 'inApp',
+        inAppSettings: {
+          frequency: 2,
+          capping: 0.1, // 6 minutes
+          interval: 30,
+          timeout: 5,
+          everyPage: false
+        }
+      });
     }
   }, []);
 
@@ -269,6 +285,8 @@ export default function App() {
           onDelete={handleDeleteCat}
           onView={handleViewArchivedCat}
         />
+
+        <Analytics />
 
         {/* Save Cat Modal */}
         <AnimatePresence>
