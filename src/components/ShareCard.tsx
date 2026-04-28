@@ -1,4 +1,4 @@
-import { CatMBTI } from '../constants';
+import { Language } from '../constants';
 
 interface ShareCardProps {
   typeName: string;
@@ -7,13 +7,13 @@ interface ShareCardProps {
   description: string;
   id: string;
   portraitUrl?: string | null;
+  language: Language;
 }
 
-export function ShareCard({ typeName, subTitle, traits, description, id, portraitUrl }: ShareCardProps) {
+export function ShareCard({ typeName, subTitle, traits, description, id, portraitUrl, language }: ShareCardProps) {
   // Truncate description to 30 chars
-  const shortDesc = description.length > 30 ? description.substring(0, 30) + '...' : description;
+  const shortDesc = description.length > 50 ? description.substring(0, 50) + '...' : description;
 
-  // Use standard HEX colors for components being captured to avoid html2canvas oklch errors
   const colors = {
     orange: {
       100: '#ffedd5',
@@ -60,7 +60,7 @@ export function ShareCard({ typeName, subTitle, traits, description, id, portrai
           color: colors.orange[400], 
           textTransform: 'uppercase',
           margin: 0
-        }}>喵格测试 CATI</p>
+        }}>{language === 'en' ? 'CATI TEST' : '喵格测试 CATI'}</p>
         <div style={{ width: '32px', height: '4px', backgroundColor: colors.orange[200], margin: '0 auto', borderRadius: '9999px' }} />
       </div>
 
@@ -130,7 +130,9 @@ export function ShareCard({ typeName, subTitle, traits, description, id, portrai
 
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <p style={{ fontSize: '10px', fontFamily: 'monospace', color: colors.gray[300], margin: 0 }}>cati.meow.test</p>
-        <p style={{ fontSize: '10px', color: colors.gray[400], margin: 0 }}>扫码或搜索「喵格测试」发现真实的你</p>
+        <p style={{ fontSize: '10px', color: colors.gray[400], margin: 0 }}>
+          {language === 'en' ? "Scan or search 'CATI' to find your true self" : "扫码或搜索「喵格测试」发现真实的你"}
+        </p>
       </div>
     </div>
   );

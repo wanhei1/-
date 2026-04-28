@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Trash2, ChevronRight, Cat } from 'lucide-react';
 import { SavedCat } from '../types';
+import { Language, UI_TRANSLATIONS } from '../constants';
 
 interface CatDrawerProps {
   isOpen: boolean;
@@ -8,9 +9,11 @@ interface CatDrawerProps {
   cats: SavedCat[];
   onDelete: (id: string) => void;
   onView: (cat: SavedCat) => void;
+  language: Language;
 }
 
-export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawerProps) {
+export function CatDrawer({ isOpen, onClose, cats, onDelete, onView, language }: CatDrawerProps) {
+  const t = UI_TRANSLATIONS[language];
   return (
     <AnimatePresence>
       {isOpen && (
@@ -32,7 +35,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
               <div className="flex items-center gap-2">
                 <Cat size={24} className="text-orange-500" />
-                <h2 className="text-xl font-black">喵系人格档案</h2>
+                <h2 className="text-xl font-black">{t.historyTitle}</h2>
               </div>
               <button 
                 onClick={onClose}
@@ -49,8 +52,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
                     <Cat size={40} className="opacity-20" />
                   </div>
                   <p className="text-sm font-bold tracking-widest text-center">
-                    暂无历史记录<br />
-                    快去寻找你的灵魂猫咪吧 🐾
+                    {t.emptyHistory}
                   </p>
                 </div>
               ) : (
@@ -93,7 +95,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
                         onClick={() => onView(cat)}
                         className="flex-1 bg-orange-50 text-orange-600 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-orange-100 transition-colors"
                       >
-                        再次查看详情 <ChevronRight size={14} />
+                        {t.viewResult} <ChevronRight size={14} />
                       </button>
                     </div>
                   </motion.div>
@@ -102,7 +104,7 @@ export function CatDrawer({ isOpen, onClose, cats, onDelete, onView }: CatDrawer
             </div>
 
             <div className="p-6 bg-white border-t border-gray-100 italic text-center">
-              <p className="text-[10px] text-gray-400">“ 用心发现 潜伏在灵魂里的另一个自己 ”</p>
+              <p className="text-[10px] text-gray-400">“ {language === 'en' ? 'Discover another self lurking in the soul' : '用心发现 潜伏在灵魂里的另一个自己'} ”</p>
             </div>
           </motion.div>
         </>
